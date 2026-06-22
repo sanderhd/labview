@@ -70,6 +70,10 @@ export default function LabCanvas() {
     const [type, setType] = useState<LabNodeType>("server")
     const [ip, setIp] = useState("")
 
+    // selection state
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+
     const onNodesChange = useCallback(
         (changes: NodeChange[]) =>
             setNodes((nds) => applyNodeChanges(changes, nds) as LabFlowNode[]),
@@ -85,6 +89,47 @@ export default function LabCanvas() {
         []
     )
 
+    const onNodeClick = useCallback((_: React.MouseEvent, node: LabFlowNode) => {
+        setSelectedNodeId(node.id)
+        setSelectedEdgeId(null)
+    }, [])
+
+    const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+        setSelectedEdgeId(edge.id)
+        setSelectedNodeId(null)
+    }, [])
+
+    const onPaneClick = useCallback(() => {
+        setSelectedNodeId(null)
+        setSelectedEdgeId(null)
+    }, [])
+
+    const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null
+
+    const updateSelectedNode = (patch: Partial<LabNodeData>) => {
+        if (!selectedNode) return
+        setNodes((nds) =>
+            nds.map((n) =>
+                n.id === selectedNodeId ? { ...n, data: { ...n.data, ...patch } } : n
+            )
+        )
+    }
+
+    const deleteSelectedNode = () => {
+        if (!selectedNodeId) return
+        setNodes((nds) => nds.filter((n) => n.id !== selectedNodeId))
+        setEdges((eds) => 
+            eds.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId)
+        )
+        setSelectedNodeId(null)
+    }
+
+    const deleteSelectedEdge = () => {
+        if (!selectedEdgeId) return
+        setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId))
+        setSelectedEdgeId(null)
+    }
+
     const addNode = () => {
         if (!label.trim()) return
 
@@ -95,8 +140,6 @@ export default function LabCanvas() {
         const newNode: LabFlowNode = {
             id,
             type: "lab",
-            // spawn near the middle of the current viewport-ish area,
-            // with a bit of randomness so nodes don't stack exactly
             position: {
                 x: 200 + Math.random() * 200,
                 y: 80 + Math.random() * 200,
@@ -133,8 +176,12 @@ export default function LabCanvas() {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                onEdgeClick={onEdgeClick}
+                onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 fitView
+                deleteKeyCode={["Backspace", "Delete"]}
                 defaultEdgeOptions={{
                     style: { stroke: "#525252", strokeWidth: 1.5 },
                 }}
@@ -199,6 +246,87 @@ export default function LabCanvas() {
                     Add to canvas
                 </button>
             </div>
+
+            {/* edit node */}
+            {selectedNode && (
+                <div className="absolute right-4 top-20 z-10 w-64 rounded-xl border border-white/10 bg-neutral-900/90 p-3 backdrop-blur-sm">
+                    <div className="mb-2 flex items-center justify-between">
+                        <span className="font-mono text-[10px] uppercase tracking-wide text-neutral-500">
+                            Edit Node
+                        </span>
+                        <span className="font-mono text-[10px] text-neutral-600">
+                            {selectedNode.id}
+                        </span>
+                    </div>
+
+                    <input
+                        value={selectedNode.data.label}
+                        onChange={(e) => updateSelectedNode({ label: e.target.value })}
+                        placeholder="Label"
+                        className="mb-2 w-full rounded-lg border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-emerald-400/40"
+                    />
+
+                    <select
+                        value={selectedNode.data.type}
+                        onChange={(e) =>
+                            updateSelectedNode({ type: e.target.value as LabNodeType })
+                        }
+                        className="mb-2 w-full rounded-lg border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-sm text-neutral-100 outline-none focus:border-emerald-400/40"
+                    >
+                        {NODE_TYPES.map((t) => (
+                            <option key={t} value={t}>
+                                {t}
+                            </option>
+                        ))}
+                    </select>
+
+                    <input
+                        value={selectedNode.data.ip ?? ""}
+                        onChange={(e) =>
+                            updateSelectedNode({ ip: e.target.value || undefined })
+                        }
+                        placeholder="IP (optional)"
+                        className="mb-3 w-full rounded-lg border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-emerald-400/40"
+                    />
+
+                    <label className="mb-3 flex items-center gap-2 text-sm text-neutral-300">
+                        <input
+                            type="checkbox"
+                            checked={selectedNode.data.active ?? true}
+                            onChange={(e) =>
+                                updateSelectedNode({ active: e.target.checked })
+                            }
+                            className="h-3.5 w-3.5 accent-emerald-400"
+                        />
+                        Active
+                    </label>
+
+                    <button
+                        onClick={deleteSelectedNode}
+                        className="w-full rounded-lg bg-red-500/90 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    >
+                        Delete node
+                    </button>
+                </div>
+            )}
+
+            {/* edit edge */}
+            {selectedEdgeId && (
+                <div className="absolute right-4 top-20 z-10 w-64 rounded-xl border border-white/10 bg-neutral-900/90 p-3 backdrop-blur-sm">
+                    <div className="mb-3 font-mono text-[10px] uppercase tracking-wide text-neutral-500">
+                        Edge selected
+                    </div>
+                    <div className="mb-3 font-mono text-xs text-neutral-400">
+                        {selectedEdgeId}
+                    </div>
+                    <button
+                        onClick={deleteSelectedEdge}
+                        className="w-full rounded-lg bg-red-500/90 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    >
+                        Delete Connection
+                    </button>
+                </div>
+            )}
 
             <button
                 onClick={exportJson}
