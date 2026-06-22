@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function Hero() {
     return (
         <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6">
@@ -22,12 +24,18 @@ export default function Hero() {
             </p>
 
             <div className="mt-9 flex items-center gap-3">
-                <button className="rounded-full bg-neutral-50 px-5 py-2.5 text-sm font-medium text-neutral-950 transition-opacity hover:opacity-90">
+                <Link
+                    href="/build"
+                    className="rounded-full bg-neutral-50 px-5 py-2.5 text-sm font-medium text-neutral-950 transition-opacity hover:opacity-90"
+                >
                     Open Editor
-                </button>
-                <button className="rounded-full border border-white/10 bg-white/3 px-5 py-2.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-white/6">
+                </Link>
+                <Link 
+                    href="/build"
+                    className="rounded-full border border-white/10 bg-white/3 px-5 py-2.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-white/6"
+                >
                     View Example
-                </button>
+                </Link>
             </div>
         </section>
     )
