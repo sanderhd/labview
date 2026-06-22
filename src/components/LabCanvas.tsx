@@ -54,9 +54,9 @@ const initialNodes: LabFlowNode[] = [
 ]
 
 const initialEdges: Edge[] = [
-    { id: "e1", source: "router", target: "proxmox" },
-    { id: "e2", source: "proxmox", target: "vm-01" },
-    { id: "e3", source: "proxmox", target: "vm-02" },
+    { id: "e1", source: "router", sourceHandle: "source", target: "proxmox", targetHandle: "target" },
+    { id: "e2", source: "proxmox", sourceHandle: "source", target: "vm-01", targetHandle: "target" },
+    { id: "e3", source: "proxmox", sourceHandle: "source", target: "vm-02", targetHandle: "target" },
 ]
 
 const NODE_TYPES: LabNodeType[] = ["router", "server", "vm", "service", "nas"]
