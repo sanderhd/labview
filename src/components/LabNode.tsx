@@ -1,4 +1,5 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react"
+import { Box, Circle, HardDrive, LucideIcon, Router, Server } from "lucide-react"
 
 export type LabNodeType = "router" | "server" | "vm" | "service" | "nas"
 
@@ -9,12 +10,12 @@ export type LabNodeData = {
     active?: boolean
 }
 
-const ICONS: Record<LabNodeType, string> = {
-    router: "◇",
-    server: "▢",
-    vm: "▣",
-    service: "●",
-    nas: "▭",
+const ICONS: Record<LabNodeType, LucideIcon> = {
+    router: Router,
+    server: Server,
+    vm: Box,
+    service: Circle,
+    nas: HardDrive,
 }
 
 export default function LabNode({
@@ -22,6 +23,7 @@ export default function LabNode({
     selected,
 }: NodeProps & { data: LabNodeData }) {
     const { label, type = "server", ip, active = true } = data
+    const Icon = ICONS[type] ?? Circle
 
     return (
         <div
@@ -46,7 +48,7 @@ export default function LabNode({
 
             <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-neutral-500">
-                    {ICONS[type] ?? "●"}
+                    <Icon className="h-3.5 w-3.5 text-neutral-500" strokeWidth={1.75}/>
                 </span>
                 <span className="flex-1 truncate text-sm font-medium text-neutral-100">
                     {label}
