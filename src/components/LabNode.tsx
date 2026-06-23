@@ -1,16 +1,20 @@
+"use client"
+
 import { Handle, Position, type NodeProps } from "@xyflow/react"
-import { Box, Circle, HardDrive, LucideIcon, Router, Server } from "lucide-react"
+import { Router, Server, Box, Circle, HardDrive } from "lucide-react"
+import * as SimpleIcons from "simple-icons"
 
 export type LabNodeType = "router" | "server" | "vm" | "service" | "nas"
 
 export type LabNodeData = {
     label: string
     type: LabNodeType
+    icon?: string
     ip?: string
     active?: boolean
 }
 
-const ICONS: Record<LabNodeType, LucideIcon> = {
+const ICON_MAP: Record<LabNodeType, any> = {
     router: Router,
     server: Server,
     vm: Box,
@@ -18,12 +22,45 @@ const ICONS: Record<LabNodeType, LucideIcon> = {
     nas: HardDrive,
 }
 
+const SIMPLE_ICON_MAP: Record<string, any> = Object.fromEntries(
+    Object.values(SimpleIcons)
+        .filter((i: any) => i?.slug)
+        .map((i: any) => [i.slug, i])
+)
+
+const getSimpleIcon = (slug?: string) => {
+    if (!slug) return null
+    return SIMPLE_ICON_MAP[slug] ?? null
+}
+
 export default function LabNode({
     data,
     selected,
 }: NodeProps & { data: LabNodeData }) {
     const { label, type = "server", ip, active = true } = data
-    const Icon = ICONS[type] ?? Circle
+
+    const simpleIcon = getSimpleIcon(data.icon)
+    const LucideIcon = ICON_MAP[type] ?? Circle
+
+    const renderIcon = () => {
+        if (simpleIcon?.svg) {
+            const svg = simpleIcon.svg
+                .replace(/<svg/, '<svg width="16" height="16" fill="currentColor"')
+
+            return (
+                <span
+                    className="flex h-4 w-4 items-center justify-center text-neutral-400"
+                    dangerouslySetInnerHTML={{ __html: svg }}
+                />
+            )
+        }
+
+        if (LucideIcon) {
+            return <LucideIcon className="h-4 w-4 text-neutral-400" />
+        }
+
+        return <Circle className="h-4 w-4 text-neutral-400" />
+    }
 
     return (
         <div
@@ -48,11 +85,13 @@ export default function LabNode({
 
             <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-neutral-500">
-                    <Icon className="h-3.5 w-3.5 text-neutral-500" strokeWidth={1.75}/>
+                    {renderIcon()}
                 </span>
+
                 <span className="flex-1 truncate text-sm font-medium text-neutral-100">
                     {label}
                 </span>
+
                 <span
                     className={`h-1.5 w-1.5 rounded-full ${
                         active ? "bg-emerald-400" : "bg-neutral-600"

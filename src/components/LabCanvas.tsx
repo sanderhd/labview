@@ -17,6 +17,7 @@ import {
     type Connection,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
+import IconPicker from "./IconPicker"
 
 import LabNode, { type LabNodeData, type LabNodeType } from "./LabNode"
 
@@ -31,25 +32,49 @@ const initialNodes: LabFlowNode[] = [
         id: "router",
         type: "lab",
         position: { x: 0, y: 100 },
-        data: { label: "router", type: "router", ip: "10.0.0.1", active: true },
+        data: {
+            label: "router",
+            type: "router",
+            ip: "10.0.0.1",
+            active: true,
+            icon: "router", 
+        },
     },
     {
         id: "proxmox",
         type: "lab",
         position: { x: 260, y: 100 },
-        data: { label: "proxmox", type: "server", ip: "10.0.0.10", active: true },
+        data: {
+            label: "proxmox",
+            type: "server",
+            ip: "10.0.0.10",
+            active: true,
+            icon: "proxmox",
+        },
     },
     {
         id: "vm-01",
         type: "lab",
         position: { x: 520, y: 0 },
-        data: { label: "vm-01", type: "vm", ip: "10.0.0.11", active: true },
+        data: {
+            label: "vm-01",
+            type: "vm",
+            ip: "10.0.0.11",
+            active: true,
+            icon: "virtualbox", 
+        },
     },
     {
         id: "vm-02",
         type: "lab",
         position: { x: 520, y: 180 },
-        data: { label: "vm-02", type: "vm", ip: "10.0.0.12", active: false },
+        data: {
+            label: "vm-02",
+            type: "vm",
+            ip: "10.0.0.12",
+            active: false,
+            icon: "linux", 
+        },
     },
 ]
 
@@ -318,6 +343,11 @@ export default function LabCanvas() {
                         }
                         placeholder="IP (optional)"
                         className="mb-3 w-full rounded-lg border border-white/10 bg-neutral-950 px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-emerald-400/40"
+                    />
+
+                    <IconPicker
+                        value={selectedNode.data.icon}
+                        onChange={(slug) => updateSelectedNode({ icon: slug })}
                     />
 
                     <label className="mb-3 flex items-center gap-2 text-sm text-neutral-300">
