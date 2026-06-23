@@ -168,6 +168,37 @@ export default function LabCanvas() {
         URL.revokeObjectURL(url)
     }
 
+    const importJson = () => {
+        const input = document.createElement("input")
+        input.type = "file"
+        input.accept = ".json"
+        input.onchange = (e: any) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+
+            const reader = new FileReader()
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target?.result as string)
+                    
+                    if (data.nodes && Array.isArray(data.nodes) && data.edges && Array.isArray(data.edges)) {
+                        setNodes(data.nodes)
+                        setEdges(data.edges)
+                        setSelectedNodeId(null)
+                        setSelectedEdgeId(null)
+                        alert("Import succes")
+                    } else {
+                        alert("Invalid JSON")
+                    }
+                } catch (error) {
+                    alert("Error reading: " + (error as Error).message)
+                }
+            }
+            reader.readAsText(file)
+        }
+        input.click()
+    }
+
     return (
         <div className="relative h-screen w-full bg-neutral-950">
             <ReactFlow
@@ -333,6 +364,12 @@ export default function LabCanvas() {
                 className="absolute right-4 top-4 z-10 rounded-full border border-white/10 bg-neutral-900/80 px-4 py-2 text-sm font-medium text-neutral-200 backdrop-blur-sm transition-colors hover:bg-white/5"
             >
                 Export JSON
+            </button>
+            <button
+                onClick={importJson}
+                className="absolute right-4 top-16 z-10 ml-24 rounded-full border border-white/10 bg-neutral-900/80 px-4 py-2 text-sm font-medium text-neutral-200 backdrop-blur-sm transition-colors hover:bg-white/5"
+            >
+                Import JSON
             </button>
         </div>
     )
