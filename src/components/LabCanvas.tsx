@@ -352,7 +352,7 @@ export default function LabCanvas() {
 
             {/* edit node */}
             {selectedNode && (
-                <div className="absolute right-4 top-20 z-10 w-64 rounded-xl border border-white/10 bg-neutral-900/90 p-3 backdrop-blur-sm">
+                <div className="absolute right-4 top-46 z-10 w-64 rounded-xl border border-white/10 bg-neutral-900/90 p-3 backdrop-blur-sm">
                     <div className="mb-2 flex items-center justify-between">
                         <span className="font-mono text-[10px] uppercase tracking-wide text-neutral-500">
                             Edit Node
@@ -420,7 +420,7 @@ export default function LabCanvas() {
 
             {/* edit edge */}
             {selectedEdgeId && (
-                <div className="absolute right-4 top-20 z-10 w-64 rounded-xl border border-white/10 bg-neutral-900/90 p-3 backdrop-blur-sm">
+                <div className="absolute right-4 top-46 z-10 w-64 rounded-xl border border-white/10 bg-neutral-900/90 p-3 backdrop-blur-sm">
                     <div className="mb-3 font-mono text-[10px] uppercase tracking-wide text-neutral-500">
                         Edge selected
                     </div>
