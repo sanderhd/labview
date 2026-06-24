@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
     ReactFlow,
     Background,
@@ -86,9 +86,30 @@ const initialEdges: Edge[] = [
 
 const NODE_TYPES: LabNodeType[] = ["router", "server", "vm", "service", "nas"]
 
+const STORAGE_KEY ="lab-canvas-topology"
+
+function loadFromStorage(): { nodes: LabFlowNode[]; edges: Edge[] } | null {
+    if (typeof window === "undefined") return null
+
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw)
+
+        if (Array.isArray(data.nodes) && Array.isArray(data.edges)) {
+            return data
+        }
+
+        return null
+    } catch {
+        return null
+    }
+}
+
 export default function LabCanvas() {
     const [nodes, setNodes] = useState<LabFlowNode[]>(initialNodes)
     const [edges, setEdges] = useState<Edge[]>(initialEdges)
+    const [isLoaded, setIsLoaded] = useState(false)
 
     // add-node form state
     const [label, setLabel] = useState("")
@@ -98,6 +119,15 @@ export default function LabCanvas() {
     // selection state
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const saved = loadFromStorage()
+        if (saved) {
+            setNodes(saved.nodes)
+            setEdges(saved.edges)
+        }
+        setIsLoaded(true)
+    }, [])
 
     const onNodesChange = useCallback(
         (changes: NodeChange[]) =>
@@ -223,6 +253,23 @@ export default function LabCanvas() {
         }
         input.click()
     }
+
+    const resetCanvas = () => {
+        localStorage.removeItem(STORAGE_KEY)
+        setNodes(initialNodes)
+        setEdges(initialEdges)
+        setSelectedEdgeId(null)
+        setSelectedNodeId(null)
+    }
+
+    useEffect(() => {
+        if (!isLoaded) return
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }))
+        } catch (error) {
+            console.error("Cannot save topology:", error)
+        }
+    }, [nodes, edges, isLoaded])
 
     return (
         <div className="relative h-screen w-full bg-neutral-950">
@@ -400,6 +447,13 @@ export default function LabCanvas() {
                 className="absolute right-4 top-16 z-10 ml-24 rounded-full border border-white/10 bg-neutral-900/80 px-4 py-2 text-sm font-medium text-neutral-200 backdrop-blur-sm transition-colors hover:bg-white/5"
             >
                 Import JSON
+            </button>
+
+            <button
+                onClick={resetCanvas}
+                className="absolute right-4 top-28 z-10 ml-24 rounded-full border border-white/10 bg-neutral-900/80 px-4 py-2 text-sm font-medium text-neutral-200 backdrop-blur-sm transition-colors hover:bg-white/5"
+            >
+                Reset
             </button>
         </div>
     )
