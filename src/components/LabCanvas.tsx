@@ -18,6 +18,7 @@ import {
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import IconPicker from "./IconPicker"
+import { useSearchParams } from "next/navigation"
 
 import LabNode, { type LabNodeData, type LabNodeType } from "./LabNode"
 
@@ -84,6 +85,35 @@ const initialEdges: Edge[] = [
     { id: "e3", source: "proxmox", sourceHandle: "source", target: "vm-02", targetHandle: "target" },
 ]
 
+const exampleNodes: LabFlowNode[] = [
+    { id: "router", type: "lab", position: { x: 0, y: 200 },
+      data: { label: "router", type: "router", ip: "10.0.0.1", active: true, icon: "router" } },
+    { id: "switch", type: "lab", position: { x: 260, y: 200 },
+      data: { label: "switch", type: "service", ip: "10.0.0.2", active: true, icon: "" } },
+    { id: "proxmox", type: "lab", position: { x: 520, y: 100 },
+      data: { label: "proxmox", type: "server", ip: "10.0.0.10", active: true, icon: "proxmox" } },
+    { id: "nas", type: "lab", position: { x: 520, y: 300 },
+      data: { label: "nas", type: "nas", ip: "10.0.0.20", active: true, icon: "synology" } },
+    { id: "vm-01", type: "lab", position: { x: 800, y: 0 },
+      data: { label: "vm-01", type: "vm", ip: "10.0.0.11", active: true, icon: "virtualbox" } },
+    { id: "vm-02", type: "lab", position: { x: 800, y: 130 },
+      data: { label: "vm-02", type: "vm", ip: "10.0.0.12", active: true, icon: "linux" } },
+    { id: "vm-03", type: "lab", position: { x: 800, y: 260 },
+      data: { label: "vm-03", type: "vm", ip: "10.0.0.13", active: false, icon: "docker" } },
+    { id: "pihole", type: "lab", position: { x: 800, y: 390 },
+      data: { label: "pihole", type: "service", ip: "10.0.0.14", active: true, icon: "pihole" } },
+]
+
+const exampleEdges: Edge[] = [
+    { id: "ex1", source: "router", sourceHandle: "source", target: "switch", targetHandle: "target" },
+    { id: "ex2", source: "switch", sourceHandle: "source", target: "proxmox", targetHandle: "target" },
+    { id: "ex3", source: "switch", sourceHandle: "source", target: "nas", targetHandle: "target" },
+    { id: "ex4", source: "proxmox", sourceHandle: "source", target: "vm-01", targetHandle: "target" },
+    { id: "ex5", source: "proxmox", sourceHandle: "source", target: "vm-02", targetHandle: "target" },
+    { id: "ex6", source: "proxmox", sourceHandle: "source", target: "vm-03", targetHandle: "target" },
+    { id: "ex7", source: "switch", sourceHandle: "source", target: "pihole", targetHandle: "target" },
+]
+
 const NODE_TYPES: LabNodeType[] = ["router", "server", "vm", "service", "nas"]
 
 const STORAGE_KEY ="lab-canvas-topology"
@@ -107,6 +137,9 @@ function loadFromStorage(): { nodes: LabFlowNode[]; edges: Edge[] } | null {
 }
 
 export default function LabCanvas() {
+    const searchParams = useSearchParams()
+    const isExample = searchParams.get("example") === "true"
+
     const [nodes, setNodes] = useState<LabFlowNode[]>(initialNodes)
     const [edges, setEdges] = useState<Edge[]>(initialEdges)
     const [isLoaded, setIsLoaded] = useState(false)
@@ -121,13 +154,20 @@ export default function LabCanvas() {
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
     useEffect(() => {
+        if (isExample) {
+            setNodes(exampleNodes)
+            setEdges(exampleEdges)
+            setIsLoaded(true)
+            return
+        }
+
         const saved = loadFromStorage()
         if (saved) {
             setNodes(saved.nodes)
             setEdges(saved.edges)
         }
         setIsLoaded(true)
-    }, [])
+    }, [isExample])
 
     const onNodesChange = useCallback(
         (changes: NodeChange[]) =>
@@ -263,13 +303,13 @@ export default function LabCanvas() {
     }
 
     useEffect(() => {
-        if (!isLoaded) return
+        if (!isLoaded || isExample) return
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }))
         } catch (error) {
             console.error("Cannot save topology:", error)
         }
-    }, [nodes, edges, isLoaded])
+    }, [nodes, edges, isLoaded, isExample])
 
     return (
         <div className="relative h-screen w-full bg-neutral-950">

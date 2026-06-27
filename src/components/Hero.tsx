@@ -64,7 +64,7 @@ export default function Hero() {
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </Link>
                 <Link
-                    href="/build"
+                    href="/build?example=true"
                     className="rounded-full border border-white/10 bg-white/3 px-5 py-2.5 text-sm font-medium text-neutral-200 transition-colors hover:bg-white/6"
                 >
                     View Example
