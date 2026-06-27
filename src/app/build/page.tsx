@@ -1,10 +1,59 @@
-import LabCanvas from "@/components/LabCanvas"
-import { Suspense } from "react"
+import type { Metadata } from "next";
+import LabCanvas from "@/components/LabCanvas";
+import { decompressFromEncodedURIComponent } from "lz-string";
 
-export default function EditorPage() {
-    return (
-        <Suspense fallback={null}>
-            <LabCanvas />
-        </Suspense>
-    )
+type Props = {
+    searchParams: Promise<{ share?: string }>
+}
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+    const { share } = await searchParams
+
+    if (!share) {
+        return {
+            title: "LabView — Homelab Topology Builder",
+            description: "Build and share your homelab's topology.",
+        }
+    }
+
+    let title = "Shared topology"
+    let author = ""
+    let nodeCount = 0
+
+    try {
+        const json = decompressFromEncodedURIComponent(share)
+        if (json) {
+            const parsed = JSON.parse(json)
+            title = parsed.meta?.title || title
+            author = parsed.meta?.author || author
+            nodeCount = Array.isArray(parsed.nodes) ? parsed.nodes.length : 0
+        }
+    } catch {
+
+    }
+
+    const ogParams = new URLSearchParams({
+        title,
+        author,
+        nodes: nodeCount.toString(),
+    })
+
+    return {
+        title: `${title} — LabView`,
+        description: author ? `Topology gedeeld door ${author}` : "Bekijk deze gedeelde homelab topology",
+        openGraph: {
+            title,
+            description: author ? `door ${author}` : undefined,
+            images: [`/api/og?${ogParams.toString()}`],
+        },
+        twitter: {
+            card: "summary_large_image",
+            title,
+            images: [`/api/og?${ogParams.toString()}`],
+        },
+    }
+}
+
+export default function BuildPage() {
+    return <LabCanvas />
 }
