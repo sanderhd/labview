@@ -1,5 +1,10 @@
 import LabCanvas from "@/components/LabCanvas"
+import { Suspense } from "react"
 
 export default function EditorPage() {
-    return <LabCanvas />
+    return (
+        <Suspense fallback={null}>
+            <LabCanvas />
+        </Suspense>
+    )
 }
