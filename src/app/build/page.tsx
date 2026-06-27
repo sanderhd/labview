@@ -41,10 +41,10 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
     return {
         title: `${title} — LabView`,
-        description: author ? `Topology gedeeld door ${author}` : "Bekijk deze gedeelde homelab topology",
+        description: author ? `Topology shared by ${author}` : "View this shared topology",
         openGraph: {
             title,
-            description: author ? `door ${author}` : undefined,
+            description: author ? `by ${author}` : undefined,
             images: [`/api/og?${ogParams.toString()}`],
         },
         twitter: {
