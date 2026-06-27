@@ -19,6 +19,7 @@ import {
 import "@xyflow/react/dist/style.css"
 import IconPicker from "./IconPicker"
 import { useSearchParams } from "next/navigation"
+import { compress, compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string"
 
 import LabNode, { type LabNodeData, type LabNodeType } from "./LabNode"
 
@@ -136,9 +137,28 @@ function loadFromStorage(): { nodes: LabFlowNode[]; edges: Edge[] } | null {
     }
 }
 
+function encodeTopology(nodes: LabFlowNode[], edges: Edge[]): string {
+    return compressToEncodedURIComponent(JSON.stringify({ nodes, edges }))
+}
+
+function decodeTopology(data: string): { nodes: LabFlowNode[]; edges: Edge[] } | null {
+    try {
+        const json = decompressFromEncodedURIComponent(data)
+        if (!json) return null
+        const parsed = JSON.parse(json)
+        if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
+            return parsed
+        }
+        return null
+    } catch {
+        return null
+    }
+}
+
 export default function LabCanvas() {
     const searchParams = useSearchParams()
     const isExample = searchParams.get("example") === "true"
+    const isShareView = !!searchParams.get("share")
 
     const [nodes, setNodes] = useState<LabFlowNode[]>(initialNodes)
     const [edges, setEdges] = useState<Edge[]>(initialEdges)
@@ -154,6 +174,17 @@ export default function LabCanvas() {
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
     useEffect(() => {
+        const shareData = searchParams.get("share")
+        if (shareData) {
+            const decoded = decodeTopology(shareData)
+            if (decoded) {
+                setNodes(decoded.nodes)
+                setEdges(decoded.edges)
+                setIsLoaded(true)
+                return
+            }
+        }
+
         if (isExample) {
             setNodes(exampleNodes)
             setEdges(exampleEdges)
@@ -294,6 +325,17 @@ export default function LabCanvas() {
         input.click()
     }
 
+    const shareTopology = async () => {
+        const encoded = encodeTopology(nodes, edges)
+        const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`
+        try {
+            await navigator.clipboard.writeText(url)
+            alert("Saved share link to clipboard!")
+        } catch {
+            prompt("Copy this URL:", url)
+        }
+    }
+
     const resetCanvas = () => {
         localStorage.removeItem(STORAGE_KEY)
         setNodes(initialNodes)
@@ -303,13 +345,13 @@ export default function LabCanvas() {
     }
 
     useEffect(() => {
-        if (!isLoaded || isExample) return
+        if (!isLoaded || isExample || isShareView) return
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }))
         } catch (error) {
             console.error("Cannot save topology:", error)
         }
-    }, [nodes, edges, isLoaded, isExample])
+    }, [nodes, edges, isLoaded, isExample, isShareView])
 
     return (
         <div className="relative h-screen w-full bg-neutral-950">
@@ -490,8 +532,15 @@ export default function LabCanvas() {
             </button>
 
             <button
-                onClick={resetCanvas}
+                onClick={shareTopology}
                 className="absolute right-4 top-28 z-10 ml-24 rounded-full border border-white/10 bg-neutral-900/80 px-4 py-2 text-sm font-medium text-neutral-200 backdrop-blur-sm transition-colors hover:bg-white/5"
+            >
+                Share
+            </button>
+
+            <button
+                onClick={resetCanvas}
+                className="absolute right-4 top-40 z-10 ml-24 rounded-full border border-white/10 bg-neutral-900/80 px-4 py-2 text-sm font-medium text-neutral-200 backdrop-blur-sm transition-colors hover:bg-white/5"
             >
                 Reset
             </button>
