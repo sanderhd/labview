@@ -21,6 +21,8 @@ import IconPicker from "./IconPicker"
 import { useSearchParams } from "next/navigation"
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string"
 import { useToast } from "@/components/Toast"
+import { useConfirm } from "@/components/Modals/ConfirmModal"
+import { ShareModal, LoadSharedModal, type ShareMeta } from "@/components/Modals/ShareModal"
 
 import LabNode, { type LabNodeData, type LabNodeType } from "./LabNode"
 
@@ -40,7 +42,7 @@ const initialNodes: LabFlowNode[] = [
             type: "router",
             ip: "10.0.0.1",
             active: true,
-            icon: "router", 
+            icon: "router",
         },
     },
     {
@@ -64,7 +66,7 @@ const initialNodes: LabFlowNode[] = [
             type: "vm",
             ip: "10.0.0.11",
             active: true,
-            icon: "virtualbox", 
+            icon: "virtualbox",
         },
     },
     {
@@ -76,7 +78,7 @@ const initialNodes: LabFlowNode[] = [
             type: "vm",
             ip: "10.0.0.12",
             active: false,
-            icon: "linux", 
+            icon: "linux",
         },
     },
 ]
@@ -118,14 +120,14 @@ const exampleEdges: Edge[] = [
 
 const NODE_TYPES: LabNodeType[] = ["router", "server", "vm", "service", "nas"]
 
-const STORAGE_KEY ="lab-canvas-topology"
+const STORAGE_KEY = "lab-canvas-topology"
 
 function loadFromStorage(): { nodes: LabFlowNode[]; edges: Edge[] } | null {
     if (typeof window === "undefined") return null
 
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return null;
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (!raw) return null
         const data = JSON.parse(raw)
 
         if (Array.isArray(data.nodes) && Array.isArray(data.edges)) {
@@ -138,11 +140,13 @@ function loadFromStorage(): { nodes: LabFlowNode[]; edges: Edge[] } | null {
     }
 }
 
-function encodeTopology(nodes: LabFlowNode[], edges: Edge[]): string {
-    return compressToEncodedURIComponent(JSON.stringify({ nodes, edges }))
+function encodeTopology(nodes: LabFlowNode[], edges: Edge[], meta: ShareMeta): string {
+    return compressToEncodedURIComponent(JSON.stringify({ nodes, edges, meta }))
 }
 
-function decodeTopology(data: string): { nodes: LabFlowNode[]; edges: Edge[] } | null {
+function decodeTopology(
+    data: string
+): { nodes: LabFlowNode[]; edges: Edge[]; meta?: ShareMeta } | null {
     try {
         const json = decompressFromEncodedURIComponent(data)
         if (!json) return null
@@ -171,21 +175,34 @@ export default function LabCanvas() {
     const [ip, setIp] = useState("")
 
     // selection state
-    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-    const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+    const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
+
+    // share / load-shared modal state
+    const [shareModalOpen, setShareModalOpen] = useState(false)
+    const [pendingShare, setPendingShare] = useState<{
+        nodes: LabFlowNode[]
+        edges: Edge[]
+        meta: ShareMeta
+    } | null>(null)
 
     const { showToast } = useToast()
+    const confirm = useConfirm()
 
     useEffect(() => {
         const shareData = searchParams.get("share")
         if (shareData) {
             const decoded = decodeTopology(shareData)
             if (decoded) {
-                setNodes(decoded.nodes)
-                setEdges(decoded.edges)
+                setPendingShare({
+                    nodes: decoded.nodes,
+                    edges: decoded.edges,
+                    meta: decoded.meta ?? { title: "Untitled lab", author: "" },
+                })
                 setIsLoaded(true)
                 return
             }
+            showToast("Invalid share link", "error")
         }
 
         if (isExample) {
@@ -201,6 +218,7 @@ export default function LabCanvas() {
             setEdges(saved.edges)
         }
         setIsLoaded(true)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isExample])
 
     const onNodesChange = useCallback(
@@ -244,19 +262,36 @@ export default function LabCanvas() {
         )
     }
 
-    const deleteSelectedNode = () => {
+    const deleteSelectedNode = async () => {
         if (!selectedNodeId) return
+
+        const ok = await confirm({
+            title: "Delete node?",
+            description: `"${selectedNode?.data.label}" and all associated connections are removed. This cannot be undone.`,
+            confirmText: "Delete",
+        })
+        if (!ok) return
+
         setNodes((nds) => nds.filter((n) => n.id !== selectedNodeId))
-        setEdges((eds) => 
+        setEdges((eds) =>
             eds.filter((e) => e.source !== selectedNodeId && e.target !== selectedNodeId)
         )
         setSelectedNodeId(null)
+        showToast("Node deleted", "success")
     }
 
-    const deleteSelectedEdge = () => {
+    const deleteSelectedEdge = async () => {
         if (!selectedEdgeId) return
+
+        const ok = await confirm({
+            title: "Delete connection?",
+            confirmText: "Delete",
+        })
+        if (!ok) return
+
         setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId))
         setSelectedEdgeId(null)
+        showToast("Connection deleted", "success")
     }
 
     const addNode = () => {
@@ -309,7 +344,7 @@ export default function LabCanvas() {
             reader.onload = (event) => {
                 try {
                     const data = JSON.parse(event.target?.result as string)
-                    
+
                     if (data.nodes && Array.isArray(data.nodes) && data.edges && Array.isArray(data.edges)) {
                         setNodes(data.nodes)
                         setEdges(data.edges)
@@ -328,23 +363,44 @@ export default function LabCanvas() {
         input.click()
     }
 
-    const shareTopology = async () => {
-        const encoded = encodeTopology(nodes, edges)
+    const handleShareConfirm = async (meta: ShareMeta) => {
+        const encoded = encodeTopology(nodes, edges, meta)
         const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`
+        setShareModalOpen(false)
         try {
             await navigator.clipboard.writeText(url)
-            showToast("Saved share link to clipboard!", "success")
+            showToast("Share link copied to clip board", "success")
         } catch {
-            showToast("Could not copy link", "error")    
+            showToast("Could not copy link", "error")
         }
     }
 
-    const resetCanvas = () => {
+    const confirmLoadShared = () => {
+        if (!pendingShare) return
+        setNodes(pendingShare.nodes)
+        setEdges(pendingShare.edges)
+        setPendingShare(null)
+        showToast("Topology geladen", "success")
+    }
+
+    const cancelLoadShared = () => {
+        setPendingShare(null)
+    }
+
+    const resetCanvas = async () => {
+        const ok = await confirm({
+            title: "Reset canvas??",
+            description: "This removes your current topology and resets everything to the default layout. This action cannot be undone.",
+            confirmText: "Reset",
+        })
+        if (!ok) return
+
         localStorage.removeItem(STORAGE_KEY)
         setNodes(initialNodes)
         setEdges(initialEdges)
         setSelectedEdgeId(null)
         setSelectedNodeId(null)
+        showToast("Resetted canvas", "success")
     }
 
     useEffect(() => {
@@ -535,7 +591,7 @@ export default function LabCanvas() {
             </button>
 
             <button
-                onClick={shareTopology}
+                onClick={() => setShareModalOpen(true)}
                 className="absolute right-4 top-28 z-10 ml-24 rounded-full border border-white/10 bg-neutral-900/80 px-4 py-2 text-sm font-medium text-neutral-200 backdrop-blur-sm transition-colors hover:bg-white/5"
             >
                 Share
@@ -547,6 +603,22 @@ export default function LabCanvas() {
             >
                 Reset
             </button>
+
+            <ShareModal
+                open={shareModalOpen}
+                onClose={() => setShareModalOpen(false)}
+                onConfirm={handleShareConfirm}
+            />
+
+            {pendingShare && (
+                <LoadSharedModal
+                    open={!!pendingShare}
+                    meta={pendingShare.meta}
+                    nodeCount={pendingShare.nodes.length}
+                    onLoad={confirmLoadShared}
+                    onCancel={cancelLoadShared}
+                />
+            )}
         </div>
     )
 }
