@@ -19,7 +19,8 @@ import {
 import "@xyflow/react/dist/style.css"
 import IconPicker from "./IconPicker"
 import { useSearchParams } from "next/navigation"
-import { compress, compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string"
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from "lz-string"
+import { useToast } from "@/components/Toast"
 
 import LabNode, { type LabNodeData, type LabNodeType } from "./LabNode"
 
@@ -173,6 +174,8 @@ export default function LabCanvas() {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
+    const { showToast } = useToast()
+
     useEffect(() => {
         const shareData = searchParams.get("share")
         if (shareData) {
@@ -312,12 +315,12 @@ export default function LabCanvas() {
                         setEdges(data.edges)
                         setSelectedNodeId(null)
                         setSelectedEdgeId(null)
-                        alert("Import succes")
+                        showToast("Import succes", "success")
                     } else {
-                        alert("Invalid JSON")
+                        showToast("Invalid JSON", "error")
                     }
                 } catch (error) {
-                    alert("Error reading: " + (error as Error).message)
+                    showToast("Error with reading: " + (error as Error).message, "error")
                 }
             }
             reader.readAsText(file)
@@ -330,9 +333,9 @@ export default function LabCanvas() {
         const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`
         try {
             await navigator.clipboard.writeText(url)
-            alert("Saved share link to clipboard!")
+            showToast("Saved share link to clipboard!", "success")
         } catch {
-            prompt("Copy this URL:", url)
+            showToast("Could not copy link", "error")    
         }
     }
 

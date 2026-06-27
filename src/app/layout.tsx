@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
 import NavBar from '@/components/NavBar';
+import { ToastProvider } from '@/components/Toast';
 
 const spaceGrotesk = localFont({
     src: [
@@ -60,8 +61,10 @@ export default function RootLayout({
         <html lang="en" className={`${spaceGrotesk.variable} h-full antialiased`}>
             <body className="min-h-full flex flex-col">
                 <NavBar />
-                
-                {children}
+
+                <ToastProvider>
+                    {children}
+                </ToastProvider>
 
                 <Script
                     async
