@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import LabCanvas from "@/components/LabCanvas";
 import { decompressFromEncodedURIComponent } from "lz-string";
+import { Suspense } from "react";
 
 type Props = {
     searchParams: Promise<{ share?: string }>
@@ -55,5 +56,9 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 export default function BuildPage() {
-    return <LabCanvas />
+    return (
+        <Suspense fallback={null}>
+            <LabCanvas />
+        </Suspense>
+    )
 }
